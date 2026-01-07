@@ -93,6 +93,9 @@ const loaders: Loader[] = [
 export default function Index() {
   const [selectedCategory, setSelectedCategory] = useState<LoaderCategory>('all');
   const [activeSection, setActiveSection] = useState('catalog');
+  const [formData, setFormData] = useState({ name: '', phone: '', model: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
 
   const filteredLoaders = selectedCategory === 'all' 
     ? loaders 
@@ -388,13 +391,41 @@ export default function Index() {
 
               <Card className="p-8 bg-muted/50">
                 <h4 className="text-2xl font-bold mb-6">Оставьте заявку</h4>
-                <form className="space-y-4">
+                <form className="space-y-4" onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsSubmitting(true);
+                  setSubmitMessage('');
+                  
+                  try {
+                    const response = await fetch('https://functions.poehali.dev/885f8fb7-16b5-4208-bbf2-cc77c827127b', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(formData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                      setSubmitMessage('✅ Заявка отправлена! Мы свяжемся с вами в ближайшее время.');
+                      setFormData({ name: '', phone: '', model: '' });
+                    } else {
+                      setSubmitMessage(`❌ Ошибка: ${result.error || 'Не удалось отправить заявку'}`);
+                    }
+                  } catch (error) {
+                    setSubmitMessage('❌ Ошибка соединения. Проверьте настройки email.');
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Ваше имя</label>
                     <input 
                       type="text" 
                       className="w-full px-4 py-2 rounded-lg border bg-background"
                       placeholder="Иван Иванов"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
                     />
                   </div>
                   
@@ -404,6 +435,9 @@ export default function Index() {
                       type="tel" 
                       className="w-full px-4 py-2 rounded-lg border bg-background"
                       placeholder="+7 (999) 999-99-99"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      required
                     />
                   </div>
                   
@@ -413,12 +447,22 @@ export default function Index() {
                       type="text" 
                       className="w-full px-4 py-2 rounded-lg border bg-background"
                       placeholder="LW500"
+                      value={formData.model}
+                      onChange={(e) => setFormData({ ...formData, model: e.target.value })}
                     />
                   </div>
 
-                  <Button className="w-full gap-2" size="lg">
+                  {submitMessage && (
+                    <div className={`p-4 rounded-lg text-sm ${
+                      submitMessage.includes('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {submitMessage}
+                    </div>
+                  )}
+
+                  <Button className="w-full gap-2" size="lg" type="submit" disabled={isSubmitting}>
                     <Icon name="Send" size={18} />
-                    Отправить заявку
+                    {isSubmitting ? 'Отправка...' : 'Отправить заявку'}
                   </Button>
                 </form>
               </Card>
